@@ -19,6 +19,9 @@ struct Bot
     void endTurn();     //indicates to the engine that it has made its moves
 
 private:
+    //Misc methods
+    int getDirection(Location &loc);    //Returns a direction (0 to 3) corresponding to "loc"
+
     //Breadth-first search
     const static int MEM_SIZE = 17;
     const static int MEM_MID = MEM_SIZE/2;
@@ -31,7 +34,7 @@ private:
                                     //FIFO (push_back and pop_front)
     Location firstFood;          //Contains location of the first food found
     Location firstNonVisible;    //Contains location of the first non-visible squares found
-    int bfs(Location &from);
+    int bfs(Location &from, int prefDir = 0);
     int bfsBacktrack(Location &goal);   //Backtrack to the centre from goal
 };
 

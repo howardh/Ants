@@ -36,26 +36,27 @@ void Bot::makeMoves()
     //picks out moves for each ant
     for(int ant=0; ant<(int)state.myAnts.size(); ant++)
     {
-        int dir = bfs(state.myAnts[ant]);
+        int dir = bfs(state.myAnts[ant].location, state.myAnts[ant].dir);
 
         if (dir != -1)
         {
-            Location loc = state.getLocation(state.myAnts[ant], dir);
+            Location loc = state.getLocation(state.myAnts[ant].location, dir);
             if(!state.grid[loc.row][loc.col].isWater)
-                state.makeMove(state.myAnts[ant], dir);
+                state.makeMove(state.myAnts[ant].location, dir);
             continue;
         }
-        dir = rand()%TDIRECTIONS;
+//        dir = rand()%TDIRECTIONS;
+        dir = state.myAnts[ant].dir;
 
         for(int i = 0; i<TDIRECTIONS; i++, dir = (dir+1)%TDIRECTIONS)   //Loop through all possible directions
         {
-            Location loc = state.getLocation(state.myAnts[ant], dir);
+            Location loc = state.getLocation(state.myAnts[ant].location, dir);
 
             if(!state.grid[loc.row][loc.col].isWater &&             //If the picked direction is not water
                !(state.grid[loc.row][loc.col].hillPlayer == 0) &&   // or my own anthill
                state.grid[loc.row][loc.col].ant == -1)              //  and doesn't contain an ant
             {
-                state.makeMove(state.myAnts[ant], dir);
+                state.makeMove(state.myAnts[ant].location, dir);
                 break;
             }
         }
@@ -75,13 +76,32 @@ void Bot::endTurn()
 };
 
 /**
+@param loc
+    A unit direction
+    can have the values (-1,0), (1,0), (0,-1), or (0,1)
+@return
+    A direction value between 0 and 3 (0=N, 1=E, 2=S, 3=W) corresponding to "loc"
+*/
+int Bot::getDirection(Location &loc)
+{
+    /*
+        N = (-1,0) = (-2+0)+2 = 0 -> val[0] = 0
+        E = (0,1)  = (0+1)+2  = 3 -> val[3] = 1
+        S = (1,0)  = (2+0)+2  = 4 -> val[4] = 2
+        W = (0,-1) = (0-1)+2  = 1 -> val[1] = 3
+    */
+    const static int val[] = {0,3,-1,1,2};
+    return val[loc.row*2+loc.col+2];
+}
+
+/**
 @param from
     ?????
 @return
     Direction in which to move to reach the closest food item.
     If no nearby food is found, returns -1
 */
-int Bot::bfs(Location &from)
+int Bot::bfs(Location &from, int prefDir)
 {
     //Reset everything to -1 (marks as unexplored)
     memset(mem,-1,sizeof(mem[0][0])*MEM_SIZE*MEM_SIZE);
@@ -102,6 +122,7 @@ int Bot::bfs(Location &from)
     Location tempLoc;   //Location in mem (between 0 and MEM_SIZE)
     Location realCurrent;   //Location on grid corresponding to "current"
     Location realTempLoc;   //Location on grid corresponding to "tempLoc"
+    int dir = prefDir;
     while(bfsQueue.size() > 0)
     {
         current = bfsQueue.front();
@@ -117,13 +138,13 @@ int Bot::bfs(Location &from)
         {
             return bfsBacktrack(current);
         }
-        if (firstNonVisible.col == -1 && !state.getSquare(realCurrent).isVisible)   //If we reached our first non-visible square, store this result somewhere
+        if (!state.getSquare(realCurrent).isVisible && firstNonVisible.col == -1)   //If we reached our first non-visible square, store this result somewhere
         {
             firstNonVisible = current;
         }
 
         //Check adjacent squares and add them to the queue
-        for (int dir = 0; dir < TDIRECTIONS; dir++)
+        for (int i = 0; i < TDIRECTIONS; i++, dir = (++dir)%TDIRECTIONS)
         {
 //            tempLoc = state.getLocation(current+offset, dir)-offset; //Get the location one square in the direction "dir"
 //            tempLoc.row %= state.rows;
@@ -146,6 +167,7 @@ int Bot::bfs(Location &from)
         }
     }
 
+    //if (firstNonVisible.row != -1) return rand()%5 ? -1 : bfsBacktrack(firstNonVisible);
     if (firstNonVisible.row != -1) return bfsBacktrack(firstNonVisible);
 
     //If nothing is found
@@ -162,13 +184,8 @@ int Bot::bfsBacktrack(Location &goal)
     Location direction = current - mem[current.row][current.col];   //Get the difference from the current and next position
 
     //Get the direction
-    for (int i = 0; i < TDIRECTIONS; i++)
-    {
-        if (DIRECTIONS[i][0] == direction.row && DIRECTIONS[i][1] == direction.col)
-        {
-            return i;
-        }
-    }
+    return getDirection(direction);
+
     state.bug<<"ERROR: Bot::bfsBacktrack(), no direction found"<<std::endl;
     return -1;
 }

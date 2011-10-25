@@ -10,21 +10,12 @@
 #include <queue>
 #include <stack>
 
+#include "consts.h"
 #include "Timer.h"
 #include "Bug.h"
 #include "Square.h"
 #include "Location.h"
-
-/*
-    constants
-*/
-const int TDIRECTIONS = 4;
-const char CDIRECTIONS[4] = {'N', 'E', 'S', 'W'};
-const int DIRECTIONS[4][2] = { {-1, 0}, {0, 1}, {1, 0}, {0, -1} };      //{N, E, S, W}
-enum
-{
-    NORTH, EAST, SOUTH, WEST
-};
+#include "ant.h"
 
 /*
     struct to store current state information
@@ -43,7 +34,8 @@ struct State
     bool gameover;
 
     std::vector<std::vector<Square> > grid;     //grid[row][col]
-    std::vector<Location> myAnts, enemyAnts, myHills, enemyHills, food;
+    std::vector<Location> enemyAnts, myHills, enemyHills, food;
+    std::vector<Ant> myAnts;
 
     Timer timer;
     Bug bug;
