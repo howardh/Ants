@@ -19,10 +19,8 @@ struct Bot
     void endTurn();     //indicates to the engine that it has made its moves
 
 private:
-    int moveTo(Location &from, Location &to);   //Returns a direction in which to move to go from point "from" to "to"
-
     //Breadth-first search
-    const static int MEM_SIZE = 15;
+    const static int MEM_SIZE = 17;
     const static int MEM_MID = MEM_SIZE/2;
     Location mem[MEM_SIZE][MEM_SIZE];   //Array the size of the ant's vision
                                         //   Contains the square that reaches that point the fastest
@@ -31,6 +29,8 @@ private:
                                         //   >0 = Number of steps required to go from there to a goal
     std::list<Location> bfsQueue;   //Locations to be tested in the next round of BFS
                                     //FIFO (push_back and pop_front)
+    Location firstFood;          //Contains location of the first food found
+    Location firstNonVisible;    //Contains location of the first non-visible squares found
     int bfs(Location &from);
     int bfsBacktrack(Location &goal);   //Backtrack to the centre from goal
 };

@@ -295,7 +295,7 @@ int State::getClosest(Location &from, std::vector<Location> &to)
 @return
     The Square at location "loc"
 */
-Square State::getSquare(Location &loc, bool fCheckBounds)
+Square State::getSquare(Location loc)
 {
     return grid[(loc.row + rows)%rows][(loc.col + cols)%cols];
 }

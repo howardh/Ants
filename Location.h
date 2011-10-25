@@ -19,6 +19,12 @@ struct Location
         col = c;
     };
 
+    void set(int r, int c)
+    {
+        row = r;
+        col = c;
+    }
+
     Location operator+(Location &l)
     {
         return Location(this->row+l.row, this->col+l.col);

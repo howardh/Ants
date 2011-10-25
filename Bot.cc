@@ -1,5 +1,7 @@
 #include "Bot.h"
 
+#include <string.h>
+
 using namespace std;
 
 //constructor
@@ -34,9 +36,7 @@ void Bot::makeMoves()
     //picks out moves for each ant
     for(int ant=0; ant<(int)state.myAnts.size(); ant++)
     {
-        state.bug<<"Starting position: "<<state.myAnts[ant].row<<","<<state.myAnts[ant].col<<std::endl;
         int dir = bfs(state.myAnts[ant]);
-        state.bug<<CDIRECTIONS[dir]<<std::endl;
 
         if (dir != -1)
         {
@@ -46,17 +46,6 @@ void Bot::makeMoves()
             continue;
         }
         dir = rand()%TDIRECTIONS;
-
-        //If there's food nearby, then approach the food. 90% chance of approaching the food.
-//        if (state.food.size() != 0 && rand()%10 != 0)
-//        {
-//            int closestFoodIndex = state.getClosest(state.myAnts[ant], state.food);
-//            dir = moveTo(state.myAnts[ant], state.food[closestFoodIndex]);
-//        }
-//        else
-//        {
-//            dir = rand()%TDIRECTIONS;   //Pick a random direction
-//        }
 
         for(int i = 0; i<TDIRECTIONS; i++, dir = (dir+1)%TDIRECTIONS)   //Loop through all possible directions
         {
@@ -85,29 +74,6 @@ void Bot::endTurn()
     cout << "go" << endl;
 };
 
-//int Bot::moveTo(Location &from, Location &to)
-//{
-//    Location direction(from.row - state.food[0].row,
-//                       from.col - state.food[0].col);
-//    if (direction.row < 0 && direction.col < 0)
-//    {
-//        return WEST;
-//    }
-//    if (direction.row > 0 && direction.col < 0)
-//    {
-//        return NORTH;
-//    }
-//    if (direction.row > 0 && direction.col > 0)
-//    {
-//        return EAST;
-//    }
-//    if (direction.row < 0 && direction.col > 0)
-//    {
-//        return SOUTH;
-//    }
-//    return 0;
-//}
-
 /**
 @param from
     ?????
@@ -118,14 +84,8 @@ void Bot::endTurn()
 int Bot::bfs(Location &from)
 {
     //Reset everything to -1 (marks as unexplored)
-    for (int i = 0; i < MEM_SIZE; i++)
-    {
-        for (int j = 0; j < MEM_SIZE; j++)
-        {
-            mem[i][j].col = -1;
-            mem[i][j].row = -1;
-        }
-    }
+    memset(mem,-1,sizeof(mem[0][0])*MEM_SIZE*MEM_SIZE);
+
     //Current position is marked as explored
     mem[MEM_MID][MEM_MID].row = 0;
     mem[MEM_MID][MEM_MID].col = 0;
@@ -135,39 +95,58 @@ int Bot::bfs(Location &from)
     offset.col -= MEM_MID;
 
     bfsQueue.clear();
+    firstNonVisible.set(-1,-1);
+
     bfsQueue.push_back(Location(MEM_MID,MEM_MID));    //Add starting location to queue
-    Location current;
-    Location tempLoc;
+    Location current;   //Location in mem (between 0 and MEM_SIZE)
+    Location tempLoc;   //Location in mem (between 0 and MEM_SIZE)
+    Location realCurrent;   //Location on grid corresponding to "current"
+    Location realTempLoc;   //Location on grid corresponding to "tempLoc"
     while(bfsQueue.size() > 0)
     {
         current = bfsQueue.front();
+        realCurrent = current+offset;
         bfsQueue.pop_front();
 
-        //If a goal has been reached (i.e. if "current" is a square containing food)
-        if (state.grid[current.row+offset.row][current.col+offset.col].isFood)
+        //Check if a goal has been reached
+        if (state.getSquare(realCurrent).isHill && state.getSquare(realCurrent).hillPlayer != 0)    //If "current" contains an enemy ant hill
         {
             return bfsBacktrack(current);
+        }
+        if (state.getSquare(realCurrent).isFood)    //if "current" is a square containing food)
+        {
+            return bfsBacktrack(current);
+        }
+        if (firstNonVisible.col == -1 && !state.getSquare(realCurrent).isVisible)   //If we reached our first non-visible square, store this result somewhere
+        {
+            firstNonVisible = current;
         }
 
         //Check adjacent squares and add them to the queue
         for (int dir = 0; dir < TDIRECTIONS; dir++)
         {
-            tempLoc = state.getLocation(current+offset, dir)-offset; //Get the location one square in the direction "dir"
+//            tempLoc = state.getLocation(current+offset, dir)-offset; //Get the location one square in the direction "dir"
+//            tempLoc.row %= state.rows;
+//            tempLoc.col %= state.cols;
+            tempLoc.row = current.row + DIRECTIONS[dir][0]; //Get the location one square in the direction "dir"
+            tempLoc.col = current.col + DIRECTIONS[dir][1];
 
             if (tempLoc.row < 0 || tempLoc.row >= MEM_SIZE ||   //Check boundaries
                 tempLoc.col < 0 || tempLoc.col >= MEM_SIZE )
                 continue;
             if (mem[tempLoc.row][tempLoc.col].row != -1) //This square has already been explored
                 continue;
-            if (state.grid[tempLoc.row+offset.row][tempLoc.col+offset.col].isWater ||       //This square contains water. Can't walk there.
-                state.grid[tempLoc.row+offset.row][tempLoc.col+offset.col].ant != -1 ||     //This square contains an ant
-                state.grid[tempLoc.row+offset.row][tempLoc.col+offset.col].hillPlayer == 0) //This square contains my anthill
+            if (state.getSquare(tempLoc+offset).isWater ||       //This square contains water. Can't walk there.
+                state.getSquare(tempLoc+offset).ant != -1 ||     //This square contains an ant
+                state.getSquare(tempLoc+offset).hillPlayer == 0) //This square contains my anthill
                 continue;
 
             mem[tempLoc.row][tempLoc.col] = current;    //point "current" leads to "tempLoc" the fastest
             bfsQueue.push_back(tempLoc);
         }
     }
+
+    if (firstNonVisible.row != -1) return bfsBacktrack(firstNonVisible);
 
     //If nothing is found
     return -1;
@@ -176,14 +155,10 @@ int Bot::bfs(Location &from)
 int Bot::bfsBacktrack(Location &goal)
 {
     Location current = goal;
-    state.bug<<"Backtracking: \n";
     while (mem[current.row][current.col].row != MEM_MID || mem[current.row][current.col].col != MEM_MID)    //While the previous square is not the starting point
     {
-        state.bug<<current.row<<","<<current.col<<" \t ";
-        state.bug<<mem[current.row][current.col].row<<","<<mem[current.row][current.col].col<<std::endl;
         current = mem[current.row][current.col];
     }
-    state.bug<<"\n";
     Location direction = current - mem[current.row][current.col];   //Get the difference from the current and next position
 
     //Get the direction

@@ -68,7 +68,7 @@ struct State
         My functions
     */
     int getClosest(Location &from, std::vector<Location> &to);      //Finds a point in the vector "to" which can be reached from the point "from" with the least number of moves
-    Square getSquare(Location &loc, bool fCheckBounds = true);    //Returns the square at "loc"
+    Square getSquare(Location loc);    //Returns the square at "loc"
 };
 
 std::ostream& operator<<(std::ostream &os, const State &state);
